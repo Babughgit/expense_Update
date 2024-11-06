@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expense</title>
+    <title>Expense Tracker</title>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
@@ -32,7 +32,13 @@
 
         <h2>Expense List</h2>
         <ul id="expenseList"></ul>
-        <h3>Leaderboard</h3>
+
+        <!-- Leaderboard Section - hidden by default -->
+        <div id="leaderboardSection" style="display: none;">
+            <h3>Leaderboard</h3>
+            <div id="leaderboard"></div>
+        </div>
+
         <button id="logoutbuttonid">Logout</button>
     </div>
     <script src="../public/js/expense.js"></script>

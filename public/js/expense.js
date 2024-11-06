@@ -9,13 +9,13 @@ function parseJwt(token) {
 
 document.getElementById('expense_Form').addEventListener('submit', async function(e) {
     e.preventDefault();
-
     const token = localStorage.getItem('token');
 
-    const product_name = document.getElementById('description').value; // Assuming description is used for product_name
-    const product_price = document.getElementById('amount').value; // Assuming amount is used for product_price
+    const product_name = document.getElementById('description').value;
+    const product_price = document.getElementById('amount').value;
     const category = document.getElementById('category').value;
-    
+   
+
     try {
         const response = await fetch('/addExpense', {
             method: 'POST',
@@ -23,26 +23,21 @@ document.getElementById('expense_Form').addEventListener('submit', async functio
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({
-                product_name: product_name,  // Update to match backend expectations
-                product_price: product_price, // Update to match backend expectations
-                category: category
-            })
+            body: JSON.stringify({ product_name, product_price, category })
         });
-    
 
         const data = await response.json();
         if (response.ok) {
             console.log('Expense added successfully');
             document.getElementById('expense_Form').reset();
-            fetchExpenses();
+            fetchExpenses(); // Refresh the expense list
+            loadAllUsersExpenses(); 
         } else {
-            
             alert(data.err || "Failed to add expense");
         }
     } catch (err) {
-        console.error('Error adding expenses', err);
-        alert("Error adding expenses");
+        console.error('Error adding expense:', err);
+        alert("Error adding expense");
     }
 });
 
@@ -51,24 +46,19 @@ async function fetchExpenses() {
     try {
         const response = await fetch('/getExpense', {
             method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
 
         const data = await response.json();
         if (response.ok) {
             const expenseList = document.getElementById('expenseList');
-            expenseList.innerHTML = ""; // Clear existing expenses
-            // Loop through the expenses and display items
+            expenseList.innerHTML = "";  // Clear existing expenses
             data.expenses.forEach(expense => {
                 const listItem = document.createElement('li');
-                listItem.textContent = `${expense.product_name} - Rs ${expense.product_price} (${expense.category})`; // Adjusted keys
+                listItem.textContent = `${expense.product_name} - Rs ${expense.product_price} (${expense.category})`;
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = 'Delete';
-                deleteButton.addEventListener('click', () => deleteExpense(expense.id)); // Pass expense ID to delete
-
-                // Append delete button to the list item
+                deleteButton.addEventListener('click', () => deleteExpense(expense.id));
                 listItem.appendChild(deleteButton);
                 expenseList.appendChild(listItem);
             });
@@ -76,7 +66,7 @@ async function fetchExpenses() {
             alert(data.error || 'Failed to fetch expenses');
         }
     } catch (err) {
-        console.log('Error fetching expenses', err);
+        console.error('Error fetching expenses:', err);
     }
 }
 
@@ -93,6 +83,7 @@ async function deleteExpense(expenseId) {
         if (response.ok) {
             console.log('Expense deleted successfully');
             fetchExpenses(); // Refresh the expense list
+            loadAllUsersExpenses(); // Refresh the leaderboard data instantly
         } else {
             const data = await response.json();
             alert(data.error || 'Failed to delete expense');
@@ -103,25 +94,86 @@ async function deleteExpense(expenseId) {
     }
 }
 
+
+async function checkUserPremiumStatus() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('/checkPremium', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+        if (data.isPremium) {
+            showPremiumUserStatus();
+        }
+    } catch (error) {
+        console.error("Error checking premium status:", error);
+    }
+}
+
+function showPremiumUserStatus() {
+    const buyPremiumButton = document.getElementById('buyPremiumButton');
+    buyPremiumButton.textContent = "You are a Premium User";
+    buyPremiumButton.disabled = true;
+    document.getElementById('leaderboardSection').style.display = 'block';  // Show leaderboard for premium users
+    loadAllUsersExpenses();
+}
+
+async function loadAllUsersExpenses() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('/expense/leaderboard', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            displayExpensesLeaderboard(data.expenses);
+        } else {
+            console.error("Error loading leaderboard:", response.status);
+        }
+    } catch (error) {
+        console.error("Error fetching leaderboard expenses:", error);
+    }
+}
+
+function displayExpensesLeaderboard(expenses) {
+    const leaderboardContainer = document.getElementById('leaderboard');
+    leaderboardContainer.innerHTML = '';
+
+    if (expenses.length === 0) {
+        leaderboardContainer.textContent = "No expenses available.";
+        return;
+    }
+
+    expenses.forEach(expense => {
+        const userRow = document.createElement('div');
+        userRow.className = 'user-expense-row';
+        userRow.textContent = `${expense.username}: ₹${expense.total_expenses}`;
+        leaderboardContainer.appendChild(userRow);
+    });
+}
+
 function greetUser() {
-    const token = localStorage.getItem('token'); // Get JWT token
+    const token = localStorage.getItem('token');
     const userGreeting = document.getElementById('userGreeting');
 
     if (token) {
-        const decodedToken = parseJwt(token); // Decode the JWT token
+        const decodedToken = parseJwt(token);
         userGreeting.textContent = `Welcome, ${decodedToken.username}!`;
     } else {
-        userGreeting.textContent = `Welcome, Guest!`;
+        userGreeting.textContent = "Welcome, Guest!";
     }
 }
 
 document.getElementById('logoutbuttonid').addEventListener('click', function() {
-    localStorage.removeItem('token'); // Remove JWT token from localStorage
+    localStorage.removeItem('token');
     alert('You have been logged out!');
-    window.location.href = '/login'; // Redirect to the login page
+    window.location.href = '/login';
 });
 
 window.onload = function() {
     fetchExpenses();
-    greetUser(); 
+    greetUser();
+    checkUserPremiumStatus();
 }

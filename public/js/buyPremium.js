@@ -8,33 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-async function checkUserPremiumStatus() {
-    const token = localStorage.getItem('token');
-    
-    try {
-        const response = await fetch('/checkPremium', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (data.isPremium) {
-            showPremiumUserStatus();
-        }
-    } catch (error) {
-        console.error("Error checking premium status:", error);
-    }
-}
-
-function showPremiumUserStatus() {
-    const buyPremiumButton = document.getElementById('buyPremiumButton');
-    buyPremiumButton.textContent = "You are a Premium User";
-    buyPremiumButton.disabled = true;
-    loadAllUsersExpenses(); // Load expenses leaderboard for premium users
-}
-
 async function initiatePremiumPayment() {
     const token = localStorage.getItem('token');
 
@@ -106,50 +79,4 @@ async function confirmPremiumPayment(paymentResponse) {
     }
 }
 
-async function loadAllUsersExpenses() {
-    const token = localStorage.getItem('token');
 
-    if (!token) {
-        console.error("Token is not available.");
-        return;
-    }
-
-    try {
-        const response = await fetch('/expense/leaderboard', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data && Array.isArray(data.expenses)) {
-                console.log(data.expenses);
-                displayExpensesLeaderboard(data.expenses);
-            } else {
-                console.error("Unexpected response format from leaderboard endpoint.");
-            }
-        } else {
-            console.error("Error loading expenses leaderboard: HTTP status", response.status);
-        }
-    } catch (error) {
-        console.error("Error fetching expenses:", error);
-    }
-}
-
-function displayExpensesLeaderboard(expenses) {
-    const leaderboardContainer = document.getElementById('leaderboard');
-    leaderboardContainer.innerHTML = ''; // Clear previous data
-
-    if (expenses.length === 0) {
-        leaderboardContainer.textContent = "No expenses available.";
-        return;
-    }
-
-    expenses.forEach(expense => {
-        const userRow = document.createElement('div');
-        userRow.className = 'user-expense-row';
-        userRow.textContent = `${expense.username}: ₹${expense.total_expenses}`;
-        leaderboardContainer.appendChild(userRow);
-    });
-}
